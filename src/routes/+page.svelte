@@ -54,6 +54,7 @@
 	// Props for dynamic positioning of Hero and Timeline
 	let heroPositionStyle: 'fixed' | 'absolute' = 'fixed';
 	let heroTopStyle: string = '0px';
+	let heroImageRef: HeroImage; // Reference to the HeroImage component instance
 	let timelinePositionStyle: 'fixed' | 'absolute' = 'fixed';
 	let timelineTopStyle: string = 'auto';
 
@@ -111,6 +112,62 @@
 			nextSectionOpacity.set(0);
 		}
 
+		// --- Video Scrubbing Logic ---
+		const timelineActive = scrollY >= s1_timelineFadeInStart && scrollY < s4_timelineTrackScrollEnd;
+		const timelineScrub =
+			scrollY >= s3_timelineTrackScrollStart && scrollY < s4_timelineTrackScrollEnd;
+
+		if (heroImageRef && typeof heroImageRef.pauseVideo === 'function') {
+			if (timelineActive) {
+				// Ensure the video is paused while the timeline is visible
+				heroImageRef.pauseVideo();
+
+				// console.log('[+page.svelte] About to get duration. heroImageRef:', heroImageRef, 'typeof heroImageRef.getVideoDuration:', typeof heroImageRef?.getVideoDuration);
+				const currentVideoDuration =
+					typeof heroImageRef.getVideoDuration === 'function' ? heroImageRef.getVideoDuration() : 0;
+
+				// Log current state for scrubbing decision (commented out for performance)
+				// console.log(
+				//  `Scrubbing Check: timelineScrub=${timelineScrub}, videoDuration=${currentVideoDuration}, s3_start=${s3_timelineTrackScrollStart}, scrollY=${scrollY}`
+				// );
+
+				// If the video's duration is known, scrub its currentTime based on scroll
+				if (
+					timelineScrub &&
+					typeof currentVideoDuration === 'number' &&
+					currentVideoDuration > 0 &&
+					typeof heroImageRef.setVideoCurrentTime === 'function'
+				) {
+					const scrubProgress =
+						(scrollY - s3_timelineTrackScrollStart) / timelineScrollActiveDuration;
+					const targetTime = Math.max(0, Math.min(1, scrubProgress)) * currentVideoDuration;
+					// console.log(
+					//  `Attempting to scrub. Progress: ${scrubProgress.toFixed(3)}, TargetTime: ${targetTime.toFixed(3)}`
+					// );
+					requestAnimationFrame(() => {
+						if (heroImageRef) heroImageRef.setVideoCurrentTime(targetTime);
+					});
+				} else if (!timelineScrub && typeof heroImageRef.setVideoCurrentTime === 'function') {
+					// Before the scrubbing zone (timeline fade-in), keep the video at the beginning
+					// console.log('Timeline active, but not scrubbing period. Setting video to time 0.');
+					requestAnimationFrame(() => {
+						if (heroImageRef) heroImageRef.setVideoCurrentTime(0);
+					});
+				} else if (timelineScrub) {
+					// This case means timelineScrub is true, but currentVideoDuration or setVideoCurrentTime conditions failed
+					console.warn(
+						'Scrubbing period, but video duration or setVideoCurrentTime is invalid. Duration:',
+						currentVideoDuration // Use the fetched duration here
+					);
+				}
+			} else {
+				// Outside the timeline phase, let the video autoplay/play if it was paused
+				if (heroImageRef.isVideoPaused && heroImageRef.isVideoPaused()) {
+					heroImageRef.playVideo?.();
+				}
+			}
+		}
+
 		// Determine Timeline Opacity and Vertical Translation
 		let currentTimelineOpacity = 0;
 		let currentTimelineTranslateY = 100;
@@ -129,7 +186,8 @@
 		} else if (scrollY >= s6_timelineFadeOutEnd) {
 			currentTimelineOpacity = 0;
 			currentTimelineTranslateY = 0; // Remains at 0 Y translation after fade out
-		} else { // scrollY < s1_timelineFadeInStart (and also covers between s0_heroEnd and s1_timelineFadeInStart)
+		} else {
+			// scrollY < s1_timelineFadeInStart (and also covers between s0_heroEnd and s1_timelineFadeInStart)
 			currentTimelineOpacity = 0;
 			currentTimelineTranslateY = 100;
 		}
@@ -138,11 +196,13 @@
 
 		// Timeline track horizontal scroll
 		if (scrollY >= s3_timelineTrackScrollStart && scrollY < s4_timelineTrackScrollEnd) {
-			const trackScrollProgress = (scrollY - s3_timelineTrackScrollStart) / timelineScrollActiveDuration;
+			const trackScrollProgress =
+				(scrollY - s3_timelineTrackScrollStart) / timelineScrollActiveDuration;
 			timelineTrackTranslateX.set(trackScrollProgress * -150);
 		} else if (scrollY < s3_timelineTrackScrollStart) {
 			timelineTrackTranslateX.set(0);
-		} else { // scrollY >= s4_timelineTrackScrollEnd
+		} else {
+			// scrollY >= s4_timelineTrackScrollEnd
 			timelineTrackTranslateX.set(-150);
 		}
 
@@ -152,7 +212,8 @@
 			nextSectionOpacity.set(nextSectionProgress);
 		} else if (scrollY < s7_nextSectionFadeInStart) {
 			nextSectionOpacity.set(0);
-		} else { // scrollY >= s8_nextSectionFadeInEnd
+		} else {
+			// scrollY >= s8_nextSectionFadeInEnd
 			nextSectionOpacity.set(1);
 		}
 
@@ -199,7 +260,12 @@
 	onMount(() => {
 		windowHeight = window.innerHeight;
 		window.addEventListener('scroll', handleScroll);
-		handleScroll();
+		handleScroll(); // Initial call to set positions based on current scroll (likely 0)
+
+		// No need for checkVideoReadyAndPlay for autoplay, autoplay attribute handles it.
+		// We might need a check if heroImageRef is not bound by the time handleScroll is first called,
+		// but Svelte's binding should generally handle this for subsequent calls.
+
 		return () => {
 			window.removeEventListener('scroll', handleScroll);
 		};
@@ -211,34 +277,47 @@
 
 <svelte:head>
 	<title>NOPAL Studios</title>
-	<meta name="description" content="NOPAL Studios - Premier video production services. We bring your vision to life with creative storytelling and high-quality visuals." />
-	<meta name="keywords" content="video production, film production, corporate video, music videos, commercials, post-production, NOPAL Studios" />
+	<meta
+		name="description"
+		content="NOPAL Studios - Premier video production services. We bring your vision to life with creative storytelling and high-quality visuals."
+	/>
+	<meta
+		name="keywords"
+		content="video production, film production, corporate video, music videos, commercials, post-production, NOPAL Studios"
+	/>
 	<meta name="author" content="NOPAL Studios" />
 
 	<!-- Open Graph / Facebook -->
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://www.nopalstudios.com/" />
 	<meta property="og:title" content="NOPAL Studios" />
-	<meta property="og:description" content="Premier video production services. Creative storytelling and high-quality visuals." />
+	<meta
+		property="og:description"
+		content="Premier video production services. Creative storytelling and high-quality visuals."
+	/>
 	<meta property="og:image" content="https://www.nopalstudios.com/og-image.jpg" />
 
 	<!-- Twitter -->
 	<meta property="twitter:card" content="summary_large_image" />
 	<meta property="twitter:url" content="https://www.nopalstudios.com/" />
 	<meta property="twitter:title" content="NOPAL Studios" />
-	<meta property="twitter:description" content="Premier video production services. Creative storytelling and high-quality visuals." />
+	<meta
+		property="twitter:description"
+		content="Premier video production services. Creative storytelling and high-quality visuals."
+	/>
 	<meta property="twitter:image" content="https://www.nopalstudios.com/twitter-image.jpg" />
 </svelte:head>
 
 <PageHeader backgroundOpacity={$headerBackgroundOpacity} />
 
 <HeroImage
+	bind:this={heroImageRef}
 	scale={$imageScale}
-	top={$imageTop} 
+	top={$imageTop}
 	left={$imageLeft}
 	opacity={$heroOverallOpacity}
-	positionStyle={heroPositionStyle}
-	topStyle={heroTopStyle}
+	bind:positionStyle={heroPositionStyle}
+	bind:topStyle={heroTopStyle}
 />
 
 <ScrollTimeline
