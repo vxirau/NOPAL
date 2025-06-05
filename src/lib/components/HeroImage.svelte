@@ -7,26 +7,32 @@
 	export let positionStyle: 'fixed' | 'absolute' = 'fixed';
 	export let topStyle: string = '0px'; // For actual top when absolute
 
-	const heroImageUrl = "https://picsum.photos/seed/nopalhero2/1920/1080";
+	const heroVideoUrl = "/horses.mp4";
 </script>
 
 <div 
 	class="hero-image-container" 
 	style="position: {positionStyle}; top: {positionStyle === 'absolute' ? topStyle : '0'}; left: 0; width: 100vw; height: 100vh; z-index: 100; overflow: hidden; opacity: {opacity}; transition: opacity 0.3s ease-out;"
 >
-	<img
-		src={heroImageUrl}
-		alt="Hero"
-		class="hero-image"
+	<video
+		src={heroVideoUrl}
+		class="hero-visual"
+		autoplay
+		muted
+		loop
+		playsinline
+		preload="metadata"
 		style="transform: scale({scale}) translate({left}vw, {top}vh); transform-origin: center;"
-	/>
+	>
+		Your browser does not support the video tag.
+	</video>
 </div>
 
 <style>
-	.hero-image {
-		display: block; 
+	.hero-visual {
+		display: block;
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: cover; /* Ensures video fills width/height, maintaining aspect ratio, cropping if needed */
 	}
 </style>

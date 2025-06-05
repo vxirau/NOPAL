@@ -60,20 +60,55 @@
 	function handleScroll() {
 		scrollY = window.scrollY;
 
-		const heroProgress = Math.min(1, scrollY / s0_heroEnd);
-		imageScale.set(1 - heroProgress * 0.5);
-		imageTop.set(0); 
-		imageLeft.set(0); 
-		headerBackgroundOpacity.set(heroProgress);
-
-		// Determine Hero Opacity based on scroll position
-		if (scrollY < s5_timelineFadeOutStart) {
-			heroOverallOpacity.set(1); // Hero is visible before its fade-out phase
+		// --- Hero Image State Management (Scale, Position, Opacity) ---
+		if (scrollY <= s0_heroEnd) {
+			// Phase 0: Hero Image Initial Scaling Animation
+			const heroProgress = scrollY / s0_heroEnd;
+			imageScale.set(1 - heroProgress * 0.5); // Scale from 1 down to 0.5
+			imageTop.set(0); // Centered vertically during initial scale
+			imageLeft.set(0); // Centered horizontally during initial scale
+			heroOverallOpacity.set(1); // Fully visible
+			headerBackgroundOpacity.set(heroProgress);
+			heroPositionStyle = 'fixed';
+		} else if (scrollY > s0_heroEnd && scrollY < s5_timelineFadeOutStart) {
+			// Phase 1: Hero Image Scaled Down, Fixed, and Visible (before its fade-out)
+			imageScale.set(0.5);
+			imageTop.set(-10); // Positioned higher
+			imageLeft.set(0); // Centered horizontally
+			heroOverallOpacity.set(1); // Fully visible
+			headerBackgroundOpacity.set(1); // Header fully opaque
+			heroPositionStyle = 'fixed';
 		} else if (scrollY >= s5_timelineFadeOutStart && scrollY < s6_timelineFadeOutEnd) {
+			// Phase 2: Hero Image Fading Out
+			imageScale.set(0.5);
+			imageTop.set(-10); // Positioned higher
+			imageLeft.set(0); // Centered horizontally
 			const heroFadeOutProgress = (scrollY - s5_timelineFadeOutStart) / timelineFadeOutDuration;
-			heroOverallOpacity.set(1 - heroFadeOutProgress);
-		} else { // scrollY >= s6_timelineFadeOutEnd
-			heroOverallOpacity.set(0);
+			heroOverallOpacity.set(1 - heroFadeOutProgress); // Fading out
+			headerBackgroundOpacity.set(1);
+			heroPositionStyle = 'fixed';
+		} else if (scrollY >= s6_timelineFadeOutEnd && scrollY < unpinScrollPosition) {
+			// Phase 3: Hero Image Faded Out, Still Fixed (before unpinning)
+			imageScale.set(0.5);
+			imageTop.set(-10); // Positioned higher
+			imageLeft.set(0); // Centered horizontally
+			heroOverallOpacity.set(0); // Fully transparent
+			headerBackgroundOpacity.set(1);
+			heroPositionStyle = 'fixed';
+		}
+
+		// Note: The unpinning logic (scrollY >= unpinScrollPosition) will handle the final state for absolute positioning.
+		// The 'else' for heroPositionStyle (line 163) handles setting it back to 'fixed' if scrollY < unpinScrollPosition.
+
+		// Original logic for timeline and next section opacity/translation remains here, but
+		// ensure hero related properties (like headerBackgroundOpacity) are not redundantly set if already handled above.
+		// For instance, headerBackgroundOpacity is now fully managed by the hero state blocks above when hero is fixed.
+
+		// Initial state for Timeline and Next Section if not yet animated (relevant for scrollY <= s0_heroEnd)
+		if (scrollY <= s0_heroEnd) {
+			overallTimelineOpacity.set(0);
+			timelineSectionTranslateY.set(100);
+			nextSectionOpacity.set(0);
 		}
 
 		// Determine Timeline Opacity and Vertical Translation
@@ -173,6 +208,27 @@
 	const totalPageScrollHeight =
 		s8_nextSectionFadeInEnd + nextSectionContentHeight + endScrollBuffer;
 </script>
+
+<svelte:head>
+	<title>NOPAL Studios</title>
+	<meta name="description" content="NOPAL Studios - Premier video production services. We bring your vision to life with creative storytelling and high-quality visuals." />
+	<meta name="keywords" content="video production, film production, corporate video, music videos, commercials, post-production, NOPAL Studios" />
+	<meta name="author" content="NOPAL Studios" />
+
+	<!-- Open Graph / Facebook -->
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://www.nopalstudios.com/" />
+	<meta property="og:title" content="NOPAL Studios" />
+	<meta property="og:description" content="Premier video production services. Creative storytelling and high-quality visuals." />
+	<meta property="og:image" content="https://www.nopalstudios.com/og-image.jpg" />
+
+	<!-- Twitter -->
+	<meta property="twitter:card" content="summary_large_image" />
+	<meta property="twitter:url" content="https://www.nopalstudios.com/" />
+	<meta property="twitter:title" content="NOPAL Studios" />
+	<meta property="twitter:description" content="Premier video production services. Creative storytelling and high-quality visuals." />
+	<meta property="twitter:image" content="https://www.nopalstudios.com/twitter-image.jpg" />
+</svelte:head>
 
 <PageHeader backgroundOpacity={$headerBackgroundOpacity} />
 
