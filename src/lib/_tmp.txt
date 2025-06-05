@@ -1,0 +1,1 @@
+Temporary file to ensure 'lib' directory exists.
